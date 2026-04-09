@@ -43,14 +43,32 @@ impl Client {
     }
 
     pub fn resolve(&mut self, amount: u64) {
-        self.held -= amount;
+        if self.held >= amount {
+            self.held -= amount;
+        } else {
+            warn_underflow();
+        }
     }
 
     pub fn chargeback(&mut self, amount: u64) {
-        self.held -= amount;
-        self.total -= amount;
+        if self.total >= amount {
+            self.total -= amount;
+        } else {
+            warn_underflow();
+        }
+
+        if self.held >= amount {
+            self.held -= amount;
+        } else {
+            warn_underflow();
+        }
+
         self.is_locked = true;
     }
+}
+
+fn warn_underflow() {
+    eprintln!("WARNING: blocked action would be underflow");
 }
 
 #[cfg(test)]
