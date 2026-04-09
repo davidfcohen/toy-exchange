@@ -88,7 +88,6 @@ fn chargeback_deposit_record(records: &mut HashMap<u32, Record>, id: u32) -> Opt
 
 #[derive(Debug, Clone)]
 struct Record {
-    client: u16,
     action: Action,
     is_disputed: bool,
 }
@@ -96,7 +95,6 @@ struct Record {
 impl Record {
     fn new(tx: &Transaction) -> Self {
         Self {
-            client: tx.client(),
             action: tx.action(),
             is_disputed: false,
         }

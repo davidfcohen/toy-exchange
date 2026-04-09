@@ -8,7 +8,7 @@ pub struct Transaction {
     pub r#type: Action,
     pub client: u16,
     pub tx: u32,
-    pub amount: Option<f64>,
+    pub amount: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -53,9 +53,9 @@ impl<R: io::Read> Reader<R> {
 #[serde(rename_all = "snake_case")]
 pub struct Client {
     pub client: u16,
-    pub available: f64,
-    pub held: f64,
-    pub total: f64,
+    pub available: String,
+    pub held: String,
+    pub total: String,
     pub locked: bool,
 }
 
