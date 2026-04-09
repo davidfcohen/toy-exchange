@@ -67,7 +67,10 @@ fn map_client(id: u16, client: Client) -> csv::Client {
     let format_amount = |amount: u64| {
         let num = amount / 1_0000;
         let dec = amount % 1_0000;
-        format!("{num}.{dec}")
+        format!("{num}.{dec:04}")
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string()
     };
 
     csv::Client {
