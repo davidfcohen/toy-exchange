@@ -16,7 +16,7 @@ impl Exchange {
         Self::default()
     }
 
-    pub fn apply(&mut self, block: impl Iterator<Item = (u32, Transaction)>) {
+    pub fn apply(&mut self, block: impl IntoIterator<Item = (u32, Transaction)>) {
         for (id, tx) in block {
             self.apply_one(id, tx);
         }
@@ -99,5 +99,36 @@ impl Record {
             action: tx.action(),
             is_disputed: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_given_example() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(2, Action::Deposit(2_0000))),
+            (3, Transaction::new(1, Action::Deposit(2_0000))),
+            (4, Transaction::new(1, Action::Withdraw(1_5000))),
+            (5, Transaction::new(2, Action::Withdraw(3_0000))),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.available(), 1_5000);
+        assert_eq!(c1.total(), 1_5000);
+        assert_eq!(c1.held(), 0);
+        assert!(!c1.is_locked());
+
+        let c2 = clients.get(&2).unwrap();
+        assert_eq!(c2.available(), 2_0000);
+        assert_eq!(c2.total(), 2_0000);
+        assert_eq!(c2.held(), 0);
+        assert!(!c2.is_locked());
     }
 }

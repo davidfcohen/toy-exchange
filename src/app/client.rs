@@ -22,6 +22,10 @@ impl Client {
         self.total - self.held
     }
 
+    pub fn is_locked(&self) -> bool {
+        self.is_locked
+    }
+
     pub fn deposit(&mut self, amount: u64) {
         if !self.is_locked {
             self.total += amount;
@@ -52,6 +56,15 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_new() {
+        let client = Client::new();
+        assert_eq!(client.total(), 0);
+        assert_eq!(client.available(), 0);
+        assert_eq!(client.held(), 0);
+        assert!(!client.is_locked());
+    }
 
     #[test]
     fn test_deposit() {
@@ -132,5 +145,6 @@ mod tests {
         assert_eq!(client.total(), 200);
         assert_eq!(client.available(), 100);
         assert_eq!(client.held(), 100);
+        assert!(client.is_locked());
     }
 }
