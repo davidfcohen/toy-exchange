@@ -33,7 +33,7 @@ impl Client {
     }
 
     pub fn withdraw(&mut self, amount: u64) {
-        if !self.is_locked && self.total >= amount {
+        if !self.is_locked && amount <= self.total {
             self.total -= amount;
         }
     }
@@ -43,7 +43,7 @@ impl Client {
     }
 
     pub fn resolve(&mut self, amount: u64) {
-        if self.held >= amount {
+        if amount <= self.held {
             self.held -= amount;
         } else {
             warn_underflow();
@@ -51,13 +51,13 @@ impl Client {
     }
 
     pub fn chargeback(&mut self, amount: u64) {
-        if self.total >= amount {
+        if amount <= self.total {
             self.total -= amount;
         } else {
             warn_underflow();
         }
 
-        if self.held >= amount {
+        if amount <= self.held {
             self.held -= amount;
         } else {
             warn_underflow();

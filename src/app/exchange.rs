@@ -28,9 +28,13 @@ impl Exchange {
         match tx.action() {
             Action::Deposit(amount) => {
                 client.deposit(amount);
+                let record = Record::new(&tx);
+                self.records.insert(id, record);
             }
             Action::Withdraw(amount) => {
                 client.withdraw(amount);
+                let record = Record::new(&tx);
+                self.records.insert(id, record);
             }
             Action::Dispute => {
                 if let Some(amount) = dispute_deposit_record(&mut self.records, id) {
@@ -48,9 +52,6 @@ impl Exchange {
                 }
             }
         }
-
-        let record = Record::new(&tx);
-        self.records.insert(id, record);
     }
 
     pub fn into_clients(self) -> impl Iterator<Item = (u16, Client)> {
@@ -120,15 +121,155 @@ mod tests {
         let clients: HashMap<_, _> = exchange.into_clients().collect();
 
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.available(), 1_5000);
         assert_eq!(c1.total(), 1_5000);
+        assert_eq!(c1.available(), 1_5000);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
 
         let c2 = clients.get(&2).unwrap();
-        assert_eq!(c2.available(), 2_0000);
         assert_eq!(c2.total(), 2_0000);
+        assert_eq!(c2.available(), 2_0000);
         assert_eq!(c2.held(), 0);
         assert!(!c2.is_locked());
+    }
+
+    #[test]
+    fn test_dispute() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Dispute)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 2_0000);
+        assert_eq!(c1.held(), 1_0000);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_dispute_not_found() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (9, Transaction::new(1, Action::Dispute)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.held(), 0);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_resolve() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Dispute)),
+            (1, Transaction::new(1, Action::Resolve)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.held(), 0);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_resolve_not_found() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Dispute)),
+            (9, Transaction::new(1, Action::Resolve)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 2_0000);
+        assert_eq!(c1.held(), 1_0000);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_resolve_undisputed() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Resolve)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.held(), 0);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_chargeback() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Dispute)),
+            (1, Transaction::new(1, Action::Chargeback)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 2_0000);
+        assert_eq!(c1.available(), 2_0000);
+        assert_eq!(c1.held(), 0);
+        assert!(c1.is_locked());
+    }
+
+    #[test]
+    fn test_chargeback_undisputed() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Chargeback)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.held(), 0);
+        assert!(!c1.is_locked());
+    }
+
+    #[test]
+    fn test_chargeback_not_found() {
+        let mut exchange = Exchange::new();
+        exchange.apply([
+            (1, Transaction::new(1, Action::Deposit(1_0000))),
+            (2, Transaction::new(1, Action::Deposit(2_0000))),
+            (1, Transaction::new(1, Action::Dispute)),
+            (9, Transaction::new(1, Action::Chargeback)),
+        ]);
+
+        let clients: HashMap<_, _> = exchange.into_clients().collect();
+        let c1 = clients.get(&1).unwrap();
+        assert_eq!(c1.total(), 3_0000);
+        assert_eq!(c1.available(), 2_0000);
+        assert_eq!(c1.held(), 1_0000);
+        assert!(!c1.is_locked())
     }
 }
