@@ -54,7 +54,7 @@ impl Exchange {
         }
     }
 
-    pub fn into_clients(self) -> impl IntoIterator<Item = (u16, Client)> {
+    pub fn into_clients(self) -> impl Iterator<Item = (u16, Client)> {
         self.clients.into_iter()
     }
 }
