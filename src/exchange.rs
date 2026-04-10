@@ -74,9 +74,12 @@ fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> 
 
 fn chargeback_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
     records
-        .remove(&id)
+        .get_mut(&id)
         .filter(|deposit| deposit.is_disputed)
-        .map(|deposit| deposit.amount)
+        .map(|deposit| {
+            deposit.is_disputed = false;
+            deposit.amount
+        })
 }
 
 #[derive(Debug, Clone)]
