@@ -1,83 +1,107 @@
-mod app;
-mod csv;
+mod exchange;
 
-use app::{Action, Client, Exchange, Transaction};
+use exchange::{Action, Client, Exchange, Transaction};
+use rust_decimal::{Decimal, prelude::*};
+use serde::{Deserialize, Serialize};
+
 use std::{error::Error, fs::File, io};
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Input {
+    pub r#type: InputKind,
+    pub client: u16,
+    pub tx: u32,
+    pub amount: Option<Decimal>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InputKind {
+    Deposit,
+    Withdrawal,
+    Dispute,
+    Resolve,
+    Chargeback,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Output {
+    pub client: u16,
+    pub available: Decimal,
+    pub held: Decimal,
+    pub total: Decimal,
+    pub locked: bool,
+}
 
 pub fn run(path: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(path)?;
 
     let mut exchange = Exchange::new();
-    let mut reader = csv::Reader::new(file);
+    let mut reader = csv::Reader::from_reader(file);
 
-    const BATCH_SIZE: usize = 1000;
-    while !reader.is_done() {
-        let block = reader.read(BATCH_SIZE)?;
-        let block = block.into_iter().map(map_transaction);
-        exchange.apply(block);
+    for result in reader.deserialize() {
+        let input: Input = result?;
+        let (id, tx) = map_input(input);
+        exchange.apply(id, tx);
     }
 
-    let clients: Vec<csv::Client> = exchange
-        .into_clients()
-        .map(|(id, c)| map_client(id, c))
-        .collect();
+    let mut writer = csv::Writer::from_writer(io::stdout());
+    for (id, client) in exchange.into_clients() {
+        let output = map_output(id, client);
+        writer.serialize(output)?;
+    }
 
-    let mut writer = csv::Writer::new(io::stdout());
-    writer.write(&clients)?;
     Ok(())
 }
 
-fn map_transaction(tx: csv::Transaction) -> (u32, Transaction) {
-    let id = tx.tx;
-    let action = tx.r#type;
-    let amount = tx.amount.as_deref().and_then(parse_amount).unwrap_or(0);
+const SCALE_FACTOR: Decimal = dec!(1_0000);
 
-    let action = match action {
-        csv::Action::Deposit => Action::Deposit(amount),
-        csv::Action::Withdrawal => Action::Withdraw(amount),
-        csv::Action::Dispute => Action::Dispute,
-        csv::Action::Resolve => Action::Resolve,
-        csv::Action::Chargeback => Action::Chargeback,
+fn map_input(input: Input) -> (u32, Transaction) {
+    let map_amount = |amount: Decimal| {
+        let amount = amount * SCALE_FACTOR;
+        amount.to_u64().unwrap_or_default()
     };
 
-    let transaction = Transaction::new(tx.client, action);
-    (id, transaction)
+    let Input {
+        r#type: kind,
+        client,
+        tx: id,
+        amount,
+    } = input;
+
+    let amount = amount.map(map_amount).unwrap_or_default();
+    let action = map_input_kind(kind, amount);
+    let tx = Transaction::new(client, action);
+
+    (id, tx)
 }
 
-fn parse_amount(s: &str) -> Option<u64> {
-    let (whole, frac) = match s.split_once('.') {
-        Some((w, f)) => (w, f),
-        None => (s, ""),
-    };
-
-    if frac.len() > 4 {
-        return None;
+fn map_input_kind(kind: InputKind, amount: u64) -> Action {
+    match kind {
+        InputKind::Deposit => Action::Deposit(amount),
+        InputKind::Withdrawal => Action::Withdraw(amount),
+        InputKind::Dispute => Action::Dispute,
+        InputKind::Resolve => Action::Resolve,
+        InputKind::Chargeback => Action::Chargeback,
     }
-
-    let whole: u64 = whole.parse().ok()?;
-
-    let frac_padded = format!("{:0<4}", frac);
-    let frac: u64 = frac_padded.parse().ok()?;
-
-    let amount = whole * 1_0000 + frac;
-    Some(amount)
 }
 
-fn map_client(id: u16, client: Client) -> csv::Client {
-    let format_amount = |amount: u64| {
-        let num = amount / 1_0000;
-        let dec = amount % 1_0000;
-        format!("{num}.{dec:04}")
-            .trim_end_matches('0')
-            .trim_end_matches('.')
-            .to_string()
+fn map_output(id: u16, client: Client) -> Output {
+    let map_amount = |amount| {
+        Decimal::from_u64(amount)
+            .map(|amount| amount / SCALE_FACTOR)
+            .unwrap_or_default()
     };
 
-    csv::Client {
+    let available = client.available();
+    let held = client.held();
+    let total = client.total();
+
+    Output {
         client: id,
-        available: format_amount(client.available()),
-        held: format_amount(client.held()),
-        total: format_amount(client.total()),
+        available: map_amount(available),
+        held: map_amount(held),
+        total: map_amount(total),
         locked: client.is_locked(),
     }
 }

@@ -5,7 +5,7 @@ fn main() {
     let name = args.next().unwrap_or_default();
 
     let path = args.next().unwrap_or_else(|| {
-        eprintln!("USAGE: {} <FILE>", &name);
+        eprintln!("usage: {name} <file>");
         process::exit(1);
     });
 
