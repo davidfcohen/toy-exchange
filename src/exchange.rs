@@ -40,7 +40,7 @@ impl Exchange {
                 }
             }
             Action::Chargeback => {
-                if let Some(amount) = chargeback_deposit(records, id) {
+                if let Some(amount) = resolve_deposit(records, id) {
                     client.chargeback(amount);
                 }
             }
@@ -63,16 +63,6 @@ fn dispute_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> 
 }
 
 fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
-    records
-        .get_mut(&id)
-        .filter(|deposit| deposit.is_disputed)
-        .map(|deposit| {
-            deposit.is_disputed = false;
-            deposit.amount
-        })
-}
-
-fn chargeback_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
     records
         .get_mut(&id)
         .filter(|deposit| deposit.is_disputed)
