@@ -6,6 +6,7 @@ pub struct Client {
 }
 
 impl Client {
+    #[cfg(test)]
     pub fn new() -> Self {
         Self::default()
     }
@@ -68,7 +69,7 @@ impl Client {
 }
 
 fn warn_underflow() {
-    eprintln!("WARNING: blocked action would be underflow");
+    eprintln!("warn: blocked action would be underflow");
 }
 
 #[cfg(test)]

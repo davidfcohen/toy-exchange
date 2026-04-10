@@ -1,14 +1,15 @@
+mod client;
+mod transaction;
+
 use std::collections::HashMap;
 
-use super::{
-    client::Client,
-    transaction::{Action, Transaction},
-};
+pub use client::Client;
+pub use transaction::{Action, Transaction};
 
 #[derive(Debug, Default, Clone)]
 pub struct Exchange {
     clients: HashMap<u16, Client>,
-    records: HashMap<u32, Record>,
+    records: HashMap<u32, Deposit>,
 }
 
 impl Exchange {
@@ -16,88 +17,78 @@ impl Exchange {
         Self::default()
     }
 
-    pub fn apply(&mut self, block: impl IntoIterator<Item = (u32, Transaction)>) {
-        for (id, tx) in block {
-            self.apply_one(id, tx);
-        }
-    }
-
-    pub fn apply_one(&mut self, id: u32, tx: Transaction) {
+    pub fn apply(&mut self, id: u32, tx: Transaction) {
         let client = self.clients.entry(tx.client()).or_default();
+        let records = &mut self.records;
 
         match tx.action() {
             Action::Deposit(amount) => {
                 client.deposit(amount);
-                let record = Record::new(&tx);
-                self.records.insert(id, record);
+                records.insert(id, Deposit::new(amount));
             }
             Action::Withdraw(amount) => {
                 client.withdraw(amount);
-                let record = Record::new(&tx);
-                self.records.insert(id, record);
             }
             Action::Dispute => {
-                if let Some(amount) = dispute_deposit_record(&mut self.records, id) {
+                if let Some(amount) = dispute_deposit(records, id) {
                     client.dispute(amount);
                 }
             }
             Action::Resolve => {
-                if let Some(amount) = resolve_deposit_record(&mut self.records, id) {
+                if let Some(amount) = resolve_deposit(records, id) {
                     client.resolve(amount);
                 }
             }
             Action::Chargeback => {
-                if let Some(amount) = chargeback_deposit_record(&mut self.records, id) {
+                if let Some(amount) = chargeback_deposit(records, id) {
                     client.chargeback(amount);
                 }
             }
         }
     }
 
-    pub fn into_clients(self) -> impl IntoIterator<Item = (u16, Client)> {
+    pub fn into_clients(self) -> impl Iterator<Item = (u16, Client)> {
         self.clients.into_iter()
     }
 }
 
-fn dispute_deposit_record(records: &mut HashMap<u32, Record>, id: u32) -> Option<u64> {
-    records.get_mut(&id).and_then(|record| match record.action {
-        Action::Deposit(amount) if !record.is_disputed => {
-            record.is_disputed = true;
-            Some(amount)
-        }
-        _ => None,
-    })
+fn dispute_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
+    records
+        .get_mut(&id)
+        .filter(|deposit| !deposit.is_disputed)
+        .map(|deposit| {
+            deposit.is_disputed = true;
+            deposit.amount
+        })
 }
 
-fn resolve_deposit_record(records: &mut HashMap<u32, Record>, id: u32) -> Option<u64> {
-    records.get_mut(&id).and_then(|record| match record.action {
-        Action::Deposit(amount) if record.is_disputed => {
-            record.is_disputed = false;
-            Some(amount)
-        }
-        _ => None,
-    })
+fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
+    records
+        .get_mut(&id)
+        .filter(|deposit| deposit.is_disputed)
+        .map(|deposit| {
+            deposit.is_disputed = false;
+            deposit.amount
+        })
 }
 
-fn chargeback_deposit_record(records: &mut HashMap<u32, Record>, id: u32) -> Option<u64> {
-    records.remove(&id).and_then(|record| match record.action {
-        Action::Deposit(amount) if record.is_disputed => Some(amount),
-        _ => None,
-    })
+fn chargeback_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
+    records
+        .remove(&id)
+        .filter(|deposit| deposit.is_disputed)
+        .map(|deposit| deposit.amount)
 }
 
 #[derive(Debug, Clone)]
-struct Record {
-    client: u16,
-    action: Action,
+struct Deposit {
+    amount: u64,
     is_disputed: bool,
 }
 
-impl Record {
-    fn new(tx: &Transaction) -> Self {
+impl Deposit {
+    fn new(amount: u64) -> Self {
         Self {
-            client: tx.client(),
-            action: tx.action(),
+            amount,
             is_disputed: false,
         }
     }
