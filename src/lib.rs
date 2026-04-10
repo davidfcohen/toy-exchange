@@ -1,5 +1,6 @@
 mod exchange;
 
+use csv::{ReaderBuilder, Trim, Writer};
 use exchange::{Action, Client, Exchange, Transaction};
 use rust_decimal::{Decimal, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -37,7 +38,7 @@ pub fn run(path: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(path)?;
 
     let mut exchange = Exchange::new();
-    let mut reader = csv::Reader::from_reader(file);
+    let mut reader = ReaderBuilder::new().trim(Trim::All).from_reader(file);
 
     for result in reader.deserialize() {
         let input: Input = result?;
@@ -45,7 +46,7 @@ pub fn run(path: &str) -> Result<(), Box<dyn Error>> {
         exchange.apply(id, tx);
     }
 
-    let mut writer = csv::Writer::from_writer(io::stdout());
+    let mut writer = Writer::from_writer(io::stdout());
     for (id, client) in exchange.into_clients() {
         let output = map_output(id, client);
         writer.serialize(output)?;
