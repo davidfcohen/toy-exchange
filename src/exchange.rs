@@ -99,15 +99,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_given_example() {
+    fn test_given() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(2, Action::Deposit(2_0000))),
-            (3, Transaction::new(1, Action::Deposit(2_0000))),
-            (4, Transaction::new(1, Action::Withdraw(1_5000))),
-            (5, Transaction::new(2, Action::Withdraw(3_0000))),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(2, Action::Deposit(2_0000)));
+        exchange.apply(3, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(4, Transaction::new(1, Action::Withdraw(1_5000)));
+        exchange.apply(5, Transaction::new(2, Action::Withdraw(3_0000)));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
 
@@ -127,11 +125,9 @@ mod tests {
     #[test]
     fn test_dispute() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Dispute)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Dispute));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -144,11 +140,9 @@ mod tests {
     #[test]
     fn test_dispute_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (9, Transaction::new(1, Action::Dispute)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(9, Transaction::new(1, Action::Dispute));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -161,12 +155,10 @@ mod tests {
     #[test]
     fn test_resolve() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Dispute)),
-            (1, Transaction::new(1, Action::Resolve)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Dispute));
+        exchange.apply(1, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -179,12 +171,10 @@ mod tests {
     #[test]
     fn test_resolve_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Dispute)),
-            (9, Transaction::new(1, Action::Resolve)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Dispute));
+        exchange.apply(9, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -197,11 +187,9 @@ mod tests {
     #[test]
     fn test_resolve_undisputed() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Resolve)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -214,12 +202,10 @@ mod tests {
     #[test]
     fn test_chargeback() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Dispute)),
-            (1, Transaction::new(1, Action::Chargeback)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Dispute));
+        exchange.apply(1, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -232,11 +218,9 @@ mod tests {
     #[test]
     fn test_chargeback_undisputed() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Chargeback)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
@@ -249,12 +233,10 @@ mod tests {
     #[test]
     fn test_chargeback_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply([
-            (1, Transaction::new(1, Action::Deposit(1_0000))),
-            (2, Transaction::new(1, Action::Deposit(2_0000))),
-            (1, Transaction::new(1, Action::Dispute)),
-            (9, Transaction::new(1, Action::Chargeback)),
-        ]);
+        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Dispute));
+        exchange.apply(9, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();

@@ -8,16 +8,16 @@ use serde::{Deserialize, Serialize};
 use std::{error::Error, fs::File, io};
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Input {
-    pub r#type: InputKind,
-    pub client: u16,
-    pub tx: u32,
-    pub amount: Option<Decimal>,
+struct Input {
+    r#type: InputKind,
+    client: u16,
+    tx: u32,
+    amount: Option<Decimal>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum InputKind {
+enum InputKind {
     Deposit,
     Withdrawal,
     Dispute,
@@ -26,12 +26,12 @@ pub enum InputKind {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Output {
-    pub client: u16,
-    pub available: Decimal,
-    pub held: Decimal,
-    pub total: Decimal,
-    pub locked: bool,
+struct Output {
+    client: u16,
+    available: Decimal,
+    held: Decimal,
+    total: Decimal,
+    locked: bool,
 }
 
 pub fn run(path: &str) -> Result<(), Box<dyn Error>> {
