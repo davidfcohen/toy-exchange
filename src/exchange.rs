@@ -52,7 +52,7 @@ impl Exchange {
     }
 }
 
-fn dispute_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
+fn dispute_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<i64> {
     records
         .get_mut(&id)
         .filter(|deposit| !deposit.is_disputed)
@@ -62,7 +62,7 @@ fn dispute_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> 
         })
 }
 
-fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> {
+fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<i64> {
     records
         .get_mut(&id)
         .filter(|deposit| deposit.is_disputed)
@@ -74,12 +74,12 @@ fn resolve_deposit(records: &mut HashMap<u32, Deposit>, id: u32) -> Option<u64> 
 
 #[derive(Debug, Clone)]
 struct Deposit {
-    amount: u64,
+    amount: i64,
     is_disputed: bool,
 }
 
 impl Deposit {
-    fn new(amount: u64) -> Self {
+    fn new(amount: i64) -> Self {
         Self {
             amount,
             is_disputed: false,
@@ -94,23 +94,23 @@ mod tests {
     #[test]
     fn test_given() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(2, Action::Deposit(2_0000)));
-        exchange.apply(3, Transaction::new(1, Action::Deposit(2_0000)));
-        exchange.apply(4, Transaction::new(1, Action::Withdraw(1_5000)));
-        exchange.apply(5, Transaction::new(2, Action::Withdraw(3_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(2, Action::Deposit(200)));
+        exchange.apply(3, Transaction::new(1, Action::Deposit(200)));
+        exchange.apply(4, Transaction::new(1, Action::Withdraw(150)));
+        exchange.apply(5, Transaction::new(2, Action::Withdraw(300)));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
 
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 1_5000);
-        assert_eq!(c1.available(), 1_5000);
+        assert_eq!(c1.total(), 150);
+        assert_eq!(c1.available(), 150);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
 
         let c2 = clients.get(&2).unwrap();
-        assert_eq!(c2.total(), 2_0000);
-        assert_eq!(c2.available(), 2_0000);
+        assert_eq!(c2.total(), 200);
+        assert_eq!(c2.available(), 200);
         assert_eq!(c2.held(), 0);
         assert!(!c2.is_locked());
     }
@@ -118,29 +118,29 @@ mod tests {
     #[test]
     fn test_dispute() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Dispute));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 2_0000);
-        assert_eq!(c1.held(), 1_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 200);
+        assert_eq!(c1.held(), 100);
         assert!(!c1.is_locked());
     }
 
     #[test]
     fn test_dispute_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(9, Transaction::new(1, Action::Dispute));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 300);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
     }
@@ -148,15 +148,15 @@ mod tests {
     #[test]
     fn test_resolve() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Dispute));
         exchange.apply(1, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 300);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
     }
@@ -164,30 +164,30 @@ mod tests {
     #[test]
     fn test_resolve_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Dispute));
         exchange.apply(9, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 2_0000);
-        assert_eq!(c1.held(), 1_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 200);
+        assert_eq!(c1.held(), 100);
         assert!(!c1.is_locked());
     }
 
     #[test]
     fn test_resolve_undisputed() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Resolve));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 300);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
     }
@@ -195,15 +195,15 @@ mod tests {
     #[test]
     fn test_chargeback() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Dispute));
         exchange.apply(1, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 2_0000);
-        assert_eq!(c1.available(), 2_0000);
+        assert_eq!(c1.total(), 200);
+        assert_eq!(c1.available(), 200);
         assert_eq!(c1.held(), 0);
         assert!(c1.is_locked());
     }
@@ -211,14 +211,14 @@ mod tests {
     #[test]
     fn test_chargeback_undisputed() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 3_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 300);
         assert_eq!(c1.held(), 0);
         assert!(!c1.is_locked());
     }
@@ -226,16 +226,16 @@ mod tests {
     #[test]
     fn test_chargeback_not_found() {
         let mut exchange = Exchange::new();
-        exchange.apply(1, Transaction::new(1, Action::Deposit(1_0000)));
-        exchange.apply(2, Transaction::new(1, Action::Deposit(2_0000)));
+        exchange.apply(1, Transaction::new(1, Action::Deposit(100)));
+        exchange.apply(2, Transaction::new(1, Action::Deposit(200)));
         exchange.apply(1, Transaction::new(1, Action::Dispute));
         exchange.apply(9, Transaction::new(1, Action::Chargeback));
 
         let clients: HashMap<_, _> = exchange.into_clients().collect();
         let c1 = clients.get(&1).unwrap();
-        assert_eq!(c1.total(), 3_0000);
-        assert_eq!(c1.available(), 2_0000);
-        assert_eq!(c1.held(), 1_0000);
+        assert_eq!(c1.total(), 300);
+        assert_eq!(c1.available(), 200);
+        assert_eq!(c1.held(), 100);
         assert!(!c1.is_locked())
     }
 }

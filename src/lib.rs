@@ -60,7 +60,7 @@ const SCALE_FACTOR: Decimal = dec!(1_0000);
 fn map_input(input: Input) -> (u32, Transaction) {
     let map_amount = |amount: Decimal| {
         let amount = amount * SCALE_FACTOR;
-        amount.to_u64().unwrap_or_default()
+        amount.to_i64().unwrap_or_default()
     };
 
     let Input {
@@ -77,7 +77,7 @@ fn map_input(input: Input) -> (u32, Transaction) {
     (id, tx)
 }
 
-fn map_input_kind(kind: InputKind, amount: u64) -> Action {
+fn map_input_kind(kind: InputKind, amount: i64) -> Action {
     match kind {
         InputKind::Deposit => Action::Deposit(amount),
         InputKind::Withdrawal => Action::Withdraw(amount),
@@ -89,7 +89,7 @@ fn map_input_kind(kind: InputKind, amount: u64) -> Action {
 
 fn map_output(id: u16, client: Client) -> Output {
     let map_amount = |amount| {
-        Decimal::from_u64(amount)
+        Decimal::from_i64(amount)
             .map(|amount| amount / SCALE_FACTOR)
             .unwrap_or_default()
     };

@@ -20,8 +20,8 @@ impl Transaction {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Action {
-    Deposit(u64),
-    Withdraw(u64),
+    Deposit(i64),
+    Withdraw(i64),
     Dispute,
     Resolve,
     Chargeback,

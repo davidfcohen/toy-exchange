@@ -1,7 +1,7 @@
 #[derive(Debug, Default, Clone)]
 pub struct Client {
-    total: u64,
-    held: u64,
+    total: i64,
+    held: i64,
     is_locked: bool,
 }
 
@@ -11,45 +11,45 @@ impl Client {
         Self::default()
     }
 
-    pub fn total(&self) -> u64 {
+    pub fn total(&self) -> i64 {
         self.total
     }
 
-    pub fn held(&self) -> u64 {
+    pub fn held(&self) -> i64 {
         self.held
     }
 
-    pub fn available(&self) -> u64 {
-        self.total.saturating_sub(self.held)
+    pub fn available(&self) -> i64 {
+        self.total - self.held
     }
 
     pub fn is_locked(&self) -> bool {
         self.is_locked
     }
 
-    pub fn deposit(&mut self, amount: u64) {
-        if !self.is_locked {
+    pub fn deposit(&mut self, amount: i64) {
+        if !self.is_locked && amount > 0 {
             self.total += amount;
         }
     }
 
-    pub fn withdraw(&mut self, amount: u64) {
-        if !self.is_locked && amount <= self.total {
+    pub fn withdraw(&mut self, amount: i64) {
+        if !self.is_locked && amount <= self.total && amount > 0 {
             self.total -= amount;
         }
     }
 
-    pub fn dispute(&mut self, amount: u64) {
+    pub fn dispute(&mut self, amount: i64) {
         self.held += amount;
     }
 
-    pub fn resolve(&mut self, amount: u64) {
-        self.held = self.held.saturating_sub(amount);
+    pub fn resolve(&mut self, amount: i64) {
+        self.held -= amount;
     }
 
-    pub fn chargeback(&mut self, amount: u64) {
-        self.total = self.total.saturating_sub(amount);
-        self.held = self.held.saturating_sub(amount);
+    pub fn chargeback(&mut self, amount: i64) {
+        self.total -= amount;
+        self.held -= amount;
         self.is_locked = true;
     }
 }
@@ -81,6 +81,16 @@ mod tests {
     }
 
     #[test]
+    fn test_deposit_negative() {
+        let mut client = Client::new();
+        client.deposit(100);
+
+        client.deposit(-100);
+        assert_eq!(client.total(), 100);
+        assert_eq!(client.available(), 100);
+    }
+
+    #[test]
     fn test_withdraw() {
         let mut client = Client::new();
         client.deposit(300);
@@ -92,6 +102,16 @@ mod tests {
         client.withdraw(100);
         assert_eq!(client.total(), 0);
         assert_eq!(client.available(), 0);
+    }
+
+    #[test]
+    fn test_withdraw_negative() {
+        let mut client = Client::new();
+        client.deposit(100);
+
+        client.withdraw(-100);
+        assert_eq!(client.total(), 100);
+        assert_eq!(client.available(), 100);
     }
 
     #[test]
