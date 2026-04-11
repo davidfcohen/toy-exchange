@@ -55,7 +55,7 @@ pub fn run(path: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-const SCALE_FACTOR: Decimal = dec!(1_0000);
+const SCALE_FACTOR: Decimal = dec!(10_000);
 
 fn map_input(input: Input) -> (u32, Transaction) {
     let map_amount = |amount: Decimal| {
