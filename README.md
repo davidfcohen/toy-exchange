@@ -7,7 +7,8 @@ chargebacks, and then outputs the state of clients accounts as a CSV.
 ## Completeness
 
 Toy Exchange handles deposits, withdrawals, disputes, resolutions, and
-chargebacks. It blocks deposits and withdrawals on frozen clients.
+chargebacks. It blocks deposits and withdrawals on frozen clients. It blocks
+deposits and withdrawals with negative amounts.
 
 *It's not explicitly stated whether negative balances are allowed. While it's
 clearly stated that withdrawals exceeding the account balance should be
@@ -22,9 +23,9 @@ frozen and misbehaving accounts. That being said, I chose to allow it.*
 
 ## Safety and Robustness
 
-Toy Exchange is written in 100% safe Rust and doesn't panic. An amount is
-represented as `i64` after a scaling factor is applied. `rust_decimal` is
-used for parsing and display purposes.
+Toy Exchange is written in 100% safe Rust. Release builds will not panic. An
+amount is represented as `i64` after a scaling factor is applied.
+`rust_decimal` is used for parsing and display purposes.
 
 ## Efficiency
 
