@@ -34,7 +34,7 @@ impl Client {
     }
 
     pub fn withdraw(&mut self, amount: i64) {
-        if !self.is_locked && amount <= self.total && amount > 0 {
+        if !self.is_locked && amount <= self.available() && amount > 0 {
             self.total -= amount;
         }
     }
@@ -121,10 +121,11 @@ mod tests {
     fn test_withdraw_insufficient() {
         let mut client = Client::new();
         client.deposit(300);
+        client.dispute(100);
 
-        client.withdraw(999);
+        client.withdraw(300);
         assert_eq!(client.total(), 300);
-        assert_eq!(client.available(), 300);
+        assert_eq!(client.available(), 200);
     }
 
     #[test]
