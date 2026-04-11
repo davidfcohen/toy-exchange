@@ -26,7 +26,7 @@ takes advantage of this buffer by applying transactions at read time.
 
 ## Maintainability
 
-Toy Exchange is maintanable because the business rules are encapsulated in
+Toy Exchange is maintainable because the business rules are encapsulated in
 `exchange.rs`. If we decide to use gRPC instead of CSV files and `stdout`, this
 module could be used again. Error handling is centralized in `main`. `Input`
 and  `Output` are intentionally seperate from business concepts like
