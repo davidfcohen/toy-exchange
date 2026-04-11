@@ -12,7 +12,7 @@ deposits and withdrawals with negative amounts.
 
 *It's not explicitly stated whether negative balances are allowed. While it's
 clearly stated that withdrawals exceeding the account balance should be
-blocked, the behavior is unclear for resolutions and chargebacks. For example,
+blocked, the behavior is unclear for disputes, resolutions and chargebacks. For example,
 a new client could first deposit `1.0` then withdraw `1.0`. If their first
 transaction is disputed, the clients available balance is negative. I believe that's
 how a bank account would behave, so, I used `i64` to represent the amount.*
