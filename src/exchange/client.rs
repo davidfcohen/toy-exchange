@@ -40,14 +40,17 @@ impl Client {
     }
 
     pub fn dispute(&mut self, amount: i64) {
+        debug_assert!(amount >= 0);
         self.held += amount;
     }
 
     pub fn resolve(&mut self, amount: i64) {
+        debug_assert!(amount >= 0);
         self.held -= amount;
     }
 
     pub fn chargeback(&mut self, amount: i64) {
+        debug_assert!(amount >= 0);
         self.total -= amount;
         self.held -= amount;
         self.is_locked = true;
