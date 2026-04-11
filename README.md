@@ -15,10 +15,9 @@ frozen and misbehaving accounts. That being said, I chose to allow it.*
 
 ## Safety and Robustness
 
-Toy Exchange is written in 100% safe Rust, prevents integer underflow when
-bad data is used, and doesn't panic. An amount is represented as `u64` after
-a scaling factor is applied. `rust_decimal` is used for parsing and display
-purposes.
+Toy Exchange is written in 100% safe Rust, prevents integer underflow, and
+doesn't panic. An amount is represented as `u64` after a scaling factor is
+applied. `rust_decimal` is used for parsing and display purposes.
 
 ## Efficiency
 
